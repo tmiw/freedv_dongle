@@ -62,6 +62,8 @@ add_subdirectory(${codec2_SOURCE_DIR} ${codec2_BINARY_DIR} EXCLUDE_FROM_ALL)
 
 add_executable(freedv-dongle
     main.cpp
+    ringbuf.c
+    dongle_protocol.c
 )
 
 add_custom_command(TARGET freedv-dongle
