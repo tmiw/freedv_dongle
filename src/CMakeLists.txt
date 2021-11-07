@@ -42,7 +42,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mlittle-endian -ffunction-sections -fdata-s
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ffunction-sections -fdata-sections")
 #set(CMAKE_C_FLAGS_DEBUG "")
 
-add_definitions(-DCORTEX_M7 -D__EMBEDDED__ -D__REAL__)
+add_definitions(-DCORTEX_M7 -D__EMBEDDED__ -D__REAL__ -DFDV_ARM_MATH)
 add_definitions(-DFREEDV_MODE_EN_DEFAULT=0 -DFREEDV_MODE_1600_EN=1 -DFREEDV_MODE_700D_EN=1 -DFREEDV_MODE_700E_EN=1 -DCODEC2_MODE_EN_DEFAULT=0 -DCODEC2_MODE_1300_EN=1 -DCODEC2_MODE_700C_EN=1)
                     
 FetchContent_Declare(codec2

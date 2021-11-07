@@ -50,7 +50,7 @@ void loop()
     int input_bytes = freedv_get_n_speech_samples(fdv) * sizeof(short);
     struct dongle_packet packet;
 
-    if (read_packet(&arduino_dongle_packet_handlers, &packet) > 0)
+    if (Serial.available() && read_packet(&arduino_dongle_packet_handlers, &packet) > 0)
     {
         send_ack_packet(&arduino_dongle_packet_handlers);
         ringbuf_memcpy_into(audio_input_buf, packet.packet_data.audio, packet.length);
