@@ -1,0 +1,6 @@
+[submodule "3rdparty/teensy-cmake"]
+	path = 3rdparty/teensy-cmake
+	url = https://github.com/xya/teensy-cmake.git
+[submodule "3rdparty/cores"]
+	path = 3rdparty/cores
+	url = https://github.com/PaulStoffregen/cores.git

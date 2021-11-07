@@ -1,0 +1,90 @@
+set(TEENSY_CORE_DIR "${CMAKE_CURRENT_LIST_DIR}/../3rdparty/cores/teensy4")
+
+set(TEENSY_C_SOURCES
+    ${TEENSY_CORE_DIR}/analog.c
+    ${TEENSY_CORE_DIR}/bootdata.c
+    ${TEENSY_CORE_DIR}/clockspeed.c
+    ${TEENSY_CORE_DIR}/debugprintf.c
+    ${TEENSY_CORE_DIR}/delay.c
+    ${TEENSY_CORE_DIR}/digital.c
+    ${TEENSY_CORE_DIR}/eeprom.c
+    ${TEENSY_CORE_DIR}/extmem.c
+    ${TEENSY_CORE_DIR}/fuse.c
+    ${TEENSY_CORE_DIR}/interrupt.c
+    ${TEENSY_CORE_DIR}/keylayouts.c
+    ${TEENSY_CORE_DIR}/libc.c
+    ${TEENSY_CORE_DIR}/nonstd.c
+    ${TEENSY_CORE_DIR}/pwm.c
+    ${TEENSY_CORE_DIR}/rtc.c
+    ${TEENSY_CORE_DIR}/sm_alloc_valid.c
+    ${TEENSY_CORE_DIR}/sm_calloc.c
+    ${TEENSY_CORE_DIR}/sm_free.c
+    ${TEENSY_CORE_DIR}/sm_hash.c
+    ${TEENSY_CORE_DIR}/sm_malloc.c
+    ${TEENSY_CORE_DIR}/sm_malloc_stats.c
+    ${TEENSY_CORE_DIR}/sm_pool.c
+    ${TEENSY_CORE_DIR}/sm_realloc.c
+    ${TEENSY_CORE_DIR}/sm_realloc_i.c
+    ${TEENSY_CORE_DIR}/sm_realloc_move.c
+    ${TEENSY_CORE_DIR}/sm_szalloc.c
+    ${TEENSY_CORE_DIR}/sm_util.c
+    ${TEENSY_CORE_DIR}/sm_zalloc.c
+    ${TEENSY_CORE_DIR}/startup.c
+    ${TEENSY_CORE_DIR}/tempmon.c
+    ${TEENSY_CORE_DIR}/usb.c
+    ${TEENSY_CORE_DIR}/usb_desc.c
+    ${TEENSY_CORE_DIR}/usb_joystick.c
+    ${TEENSY_CORE_DIR}/usb_keyboard.c
+    ${TEENSY_CORE_DIR}/usb_midi.c
+    ${TEENSY_CORE_DIR}/usb_mouse.c
+    ${TEENSY_CORE_DIR}/usb_mtp.c
+    ${TEENSY_CORE_DIR}/usb_rawhid.c
+    ${TEENSY_CORE_DIR}/usb_seremu.c
+    ${TEENSY_CORE_DIR}/usb_serial.c
+    ${TEENSY_CORE_DIR}/usb_serial2.c
+    ${TEENSY_CORE_DIR}/usb_serial3.c
+    ${TEENSY_CORE_DIR}/usb_touch.c
+)
+
+set(TEENSY_CXX_SOURCES
+    ${TEENSY_CORE_DIR}/AudioStream.cpp
+    ${TEENSY_CORE_DIR}/CrashReport.cpp
+    ${TEENSY_CORE_DIR}/DMAChannel.cpp
+    ${TEENSY_CORE_DIR}/EventResponder.cpp
+    ${TEENSY_CORE_DIR}/HardwareSerial.cpp
+    ${TEENSY_CORE_DIR}/HardwareSerial1.cpp
+    ${TEENSY_CORE_DIR}/HardwareSerial2.cpp
+    ${TEENSY_CORE_DIR}/HardwareSerial3.cpp
+    ${TEENSY_CORE_DIR}/HardwareSerial4.cpp
+    ${TEENSY_CORE_DIR}/HardwareSerial5.cpp
+    ${TEENSY_CORE_DIR}/HardwareSerial6.cpp
+    ${TEENSY_CORE_DIR}/HardwareSerial7.cpp
+    ${TEENSY_CORE_DIR}/HardwareSerial8.cpp
+    ${TEENSY_CORE_DIR}/IPAddress.cpp
+    ${TEENSY_CORE_DIR}/IntervalTimer.cpp
+    ${TEENSY_CORE_DIR}/Print.cpp
+    ${TEENSY_CORE_DIR}/Stream.cpp
+    ${TEENSY_CORE_DIR}/Time.cpp
+    ${TEENSY_CORE_DIR}/Tone.cpp
+    ${TEENSY_CORE_DIR}/WMath.cpp
+    ${TEENSY_CORE_DIR}/WString.cpp
+    ${TEENSY_CORE_DIR}/main.cpp
+    ${TEENSY_CORE_DIR}/new.cpp
+    ${TEENSY_CORE_DIR}/serialEvent.cpp
+    ${TEENSY_CORE_DIR}/serialEvent1.cpp
+    ${TEENSY_CORE_DIR}/serialEvent2.cpp
+    ${TEENSY_CORE_DIR}/serialEvent3.cpp
+    ${TEENSY_CORE_DIR}/serialEvent4.cpp
+    ${TEENSY_CORE_DIR}/serialEvent5.cpp
+    ${TEENSY_CORE_DIR}/serialEvent6.cpp
+    ${TEENSY_CORE_DIR}/serialEvent7.cpp
+    ${TEENSY_CORE_DIR}/serialEvent8.cpp
+    ${TEENSY_CORE_DIR}/serialEventUSB1.cpp
+    ${TEENSY_CORE_DIR}/serialEventUSB2.cpp
+    ${TEENSY_CORE_DIR}/usb_audio.cpp
+    ${TEENSY_CORE_DIR}/usb_flightsim.cpp
+    ${TEENSY_CORE_DIR}/usb_inst.cpp
+    ${TEENSY_CORE_DIR}/yield.cpp
+)
+
+add_library(teensy4 STATIC ${TEENSY_CXX_SOURCES} ${TEENSY_C_SOURCES})
