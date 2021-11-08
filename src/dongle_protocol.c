@@ -62,6 +62,37 @@ int send_audio_packet(struct dongle_packet_handlers* handlers, int16_t* audio)
     return send_packet_common(handlers, &packet);
 }
 
+int send_switch_tx_mode_packet(struct dongle_packet_handlers* handlers)
+{
+    struct dongle_packet packet;
+
+    packet.type = DONGLE_PACKET_SWITCH_TX_MODE;
+    packet.length = 0;
+
+    return send_packet_common(handlers, &packet);
+}
+
+int send_switch_rx_mode_packet(struct dongle_packet_handlers* handlers)
+{
+    struct dongle_packet packet;
+
+    packet.type = DONGLE_PACKET_SWITCH_RX_MODE;
+    packet.length = 0;
+
+    return send_packet_common(handlers, &packet);
+}
+
+int send_set_fdv_mode_packet(struct dongle_packet_handlers* handlers, int mode)
+{
+    struct dongle_packet packet;
+
+    packet.type = DONGLE_PACKET_SET_FDV_MODE;
+    packet.packet_data.fdv_mode_data.mode = mode;
+    packet.length = sizeof(packet.packet_data.fdv_mode_data);
+
+    return send_packet_common(handlers, &packet);
+}
+
 int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* packet)
 {
     // Look for magic number.

@@ -19,6 +19,11 @@ extern "C" {
 #define DONGLE_PACKET_SET_FDV_MODE 7
 #define DONGLE_PACKET_NACK 8
 
+// Matches freedv_api.h.
+#define DONGLE_MODE_700D 7
+#define DONGLE_MODE_700E 13
+#define DONGLE_MODE_1600 0
+
 struct dongle_packet_handlers
 {
     int (*read_fn)(struct dongle_packet_handlers*, void*, int);
@@ -49,6 +54,9 @@ struct dongle_packet
     } packet_data;
 };
 
+int send_switch_tx_mode_packet(struct dongle_packet_handlers* handlers);
+int send_switch_rx_mode_packet(struct dongle_packet_handlers* handlers);
+int send_set_fdv_mode_packet(struct dongle_packet_handlers* handlers, int mode);
 int send_ack_packet(struct dongle_packet_handlers* handlers);
 int send_audio_packet(struct dongle_packet_handlers* handlers, int16_t* audio);
 int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* packet);
