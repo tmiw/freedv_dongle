@@ -10,10 +10,7 @@ static int send_packet_common(struct dongle_packet_handlers* handlers, struct do
 {
     packet->magic_number = DONGLE_MAGIC_NUMBER;
     packet->version = 1;
-
-    int full_struct_size = sizeof(struct dongle_packet);
-    int data_size = sizeof(packet->packet_data);
-
+    
     // Write magic number
     if ((*handlers->write_fn)(handlers, &packet->magic_number, sizeof(packet->magic_number)) <= 0) return 0;
 
@@ -59,7 +56,7 @@ int send_audio_packet(struct dongle_packet_handlers* handlers, int16_t* audio)
     struct dongle_packet packet;
 
     packet.type = DONGLE_PACKET_AUDIO;
-    memcpy(&packet.packet_data.audio[0], audio, DONGLE_AUDIO_LENGTH * sizeof(int16_t));
+    memcpy(&packet.packet_data.audio_data, audio, DONGLE_AUDIO_LENGTH * sizeof(int16_t));
     packet.length = DONGLE_AUDIO_LENGTH * sizeof(int16_t);
 
     return send_packet_common(handlers, &packet);

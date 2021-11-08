@@ -12,6 +12,12 @@ extern "C" {
 
 #define DONGLE_PACKET_AUDIO 1
 #define DONGLE_PACKET_ACK 2
+#define DONGLE_PACKET_SWITCH_TX_MODE 3
+#define DONGLE_PACKET_SWITCH_RX_MODE 4
+#define DONGLE_PACKET_REQ_VERSION 5
+#define DONGLE_PACKET_RES_VERSION 6
+#define DONGLE_PACKET_SET_FDV_MODE 7
+#define DONGLE_PACKET_NACK 8
 
 struct dongle_packet_handlers
 {
@@ -29,7 +35,17 @@ struct dongle_packet
     uint16_t length;
     union
     {
-        int16_t audio[DONGLE_AUDIO_LENGTH];
+        struct {
+            int16_t audio[DONGLE_AUDIO_LENGTH];
+        } audio_data;
+        struct {
+            uint32_t major;
+            uint32_t minor;
+            uint32_t patch;
+        } sw_version_data;
+        struct {
+            uint32_t mode;
+        } fdv_mode_data;
     } packet_data;
 };
 
