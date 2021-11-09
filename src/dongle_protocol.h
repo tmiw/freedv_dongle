@@ -61,6 +61,12 @@ int send_ack_packet(struct dongle_packet_handlers* handlers);
 int send_audio_packet(struct dongle_packet_handlers* handlers, int16_t* audio);
 int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* packet);
 
+#if defined(__linux__) || defined(__APPLE__)
+struct dongle_packet_handlers* dongle_open_port(char* serialPort);
+void dongle_close_port(struct dongle_packet_handlers* handle);
+int dongle_has_data_available(struct dongle_packet_handlers* hndl, int timeout_sec, int timeout_usec);
+#endif // defined(__linux__) || defined(__APPLE__)
+
 #ifdef __cplusplus
 }
 #endif
