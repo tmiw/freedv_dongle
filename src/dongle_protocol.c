@@ -6,34 +6,97 @@
 
 #include "dongle_protocol.h"
 
+static void pack_audio_packet(char** pBuf, struct dongle_packet* packet)
+{
+    memcpy(*pBuf, &packet->packet_data.audio_data.audio, packet->length);
+    *pBuf += packet->length;
+}
+
+static void pack_version_resp_packet(char** pBuf, struct dongle_packet* packet)
+{
+    // TBD -- version response
+}
+
+static void pack_mode_switch_packet(char** pBuf, struct dongle_packet* packet)
+{
+    memcpy(*pBuf, &packet->packet_data.fdv_mode_data.mode, sizeof(packet->packet_data.fdv_mode_data.mode));
+    *pBuf += sizeof(packet->packet_data.fdv_mode_data.mode);
+}
+
+static void unpack_audio_packet(char* pBuf, struct dongle_packet* packet)
+{
+    memcpy(&packet->packet_data.audio_data.audio, pBuf, packet->length);
+    pBuf += packet->length;
+}
+
+static void unpack_mode_switch_packet(char* pBuf, struct dongle_packet* packet)
+{
+    memcpy(&packet->packet_data.fdv_mode_data.mode, pBuf, sizeof(packet->packet_data.fdv_mode_data.mode));
+    pBuf += sizeof(packet->packet_data.fdv_mode_data.mode);
+}
+
+typedef void (*pack_fn_t)(char**, struct dongle_packet*);
+typedef void (*unpack_fn_t)(char*, struct dongle_packet*);
+static pack_fn_t packet_pack_fn[] = {
+    pack_audio_packet,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    pack_version_resp_packet,
+    pack_mode_switch_packet,
+    NULL
+};
+
+static unpack_fn_t packet_unpack_fn[] = {
+    unpack_audio_packet,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    unpack_mode_switch_packet,
+    NULL
+};
+
 static int send_packet_common(struct dongle_packet_handlers* handlers, struct dongle_packet* packet)
 {
+    char tmpbuf[
+        sizeof(packet->magic_number) + 
+        sizeof(packet->version) +
+        sizeof(packet->type) +
+        sizeof(packet->length) +
+        packet->length];
+    
     packet->magic_number = DONGLE_MAGIC_NUMBER;
     packet->version = 1;
     
-    // Write magic number
-    if ((*handlers->write_fn)(handlers, &packet->magic_number, sizeof(packet->magic_number)) <= 0) return 0;
-
-    // Write rest of header
-    int bytes_to_write = sizeof(packet->version) + sizeof(packet->type) + sizeof(packet->length);
-    void* pPacket = &packet->version;
-    while (bytes_to_write > 0)
+    // Pack message header into block of data for transmit.
+    char* pBuf = &tmpbuf[0];
+    memcpy(pBuf, &packet->magic_number, sizeof(packet->magic_number));
+    pBuf += sizeof(packet->magic_number);
+    memcpy(pBuf, &packet->version, sizeof(packet->version));
+    pBuf += sizeof(packet->version);
+    memcpy(pBuf, &packet->type, sizeof(packet->type));
+    pBuf += sizeof(packet->type);
+    memcpy(pBuf, &packet->length, sizeof(packet->length));
+    pBuf += sizeof(packet->length);
+    
+    // Pack message body, if there is one.
+    if (packet_pack_fn[packet->type])
     {
-        int nwritten = (*handlers->write_fn)(handlers, pPacket, bytes_to_write);
-        if (nwritten <= 0) return 0;
-        bytes_to_write -= nwritten;
-        pPacket += nwritten;
+        (*packet_pack_fn[packet->type])(&pBuf, packet);
     }
-
-    // Write data if needed.
-    pPacket = &packet->packet_data;
-    bytes_to_write = packet->length;
+    
+    // Write data over serial port.
+    int bytes_to_write = pBuf - &tmpbuf[0];
+    pBuf = &tmpbuf[0];
     while (bytes_to_write > 0)
     {
-        int nwritten = (*handlers->write_fn)(handlers, pPacket, bytes_to_write);
+        int nwritten = (*handlers->write_fn)(handlers, pBuf, bytes_to_write);
         if (nwritten <= 0) return 0;
         bytes_to_write -= nwritten;
-        pPacket += nwritten;
+        pBuf += nwritten;
     }
 
     (*handlers->flush_packet_fn)(handlers);
@@ -105,30 +168,46 @@ int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* p
         assert(p != 0);
     }
     
-    // Read other header info in.
-    int full_struct_size = sizeof(struct dongle_packet);
-    int data_size = sizeof(packet->packet_data);
-    int bytes_to_read = full_struct_size - data_size - sizeof(packet->magic_number);
-    uint8_t* ptr = (uint8_t*)&packet->version;
+    // Read rest of packet header.
+    char tmpbuf[sizeof(struct dongle_packet)];
+    char* pBuf = &tmpbuf[sizeof(packet->magic_number)];
+    int bytes_to_read = 
+        sizeof(packet->version) +
+        sizeof(packet->type) +
+        sizeof(packet->length);
+    
     while(bytes_to_read > 0)
     {
-        int nbytes = (*handlers->read_fn)(handlers, ptr, bytes_to_read);
+        int nbytes = (*handlers->read_fn)(handlers, pBuf, bytes_to_read);
         if (nbytes <= 0) return 0;
         bytes_to_read -= nbytes;
-        ptr += nbytes;
+        pBuf += nbytes;
     }
-
-    // Read data.
+    
+    // Copy length to result packet and use that to read in the rest.
+    pBuf = &tmpbuf[0];
+    memcpy(&packet->version, pBuf, sizeof(packet->version));
+    pBuf += sizeof(packet->version);
+    memcpy(&packet->type, pBuf, sizeof(packet->type));
+    pBuf += sizeof(packet->type);
+    memcpy(&packet->length, pBuf, sizeof(packet->length));
+    pBuf += sizeof(packet->length);
+    
     bytes_to_read = packet->length;
-    ptr = (uint8_t*)&packet->packet_data;
     while(bytes_to_read > 0)
     {
-        int nbytes = (*handlers->read_fn)(handlers, ptr, bytes_to_read);
+        int nbytes = (*handlers->read_fn)(handlers, pBuf, bytes_to_read);
         if (nbytes <= 0) return 0;
         bytes_to_read -= nbytes;
-        ptr += nbytes;
+        pBuf += nbytes;
     }
 
+    // Unpack packet body, if needed.
+    if (packet_unpack_fn[packet->type])
+    {
+        (*packet_unpack_fn[packet->type])(pBuf, packet);
+    }
+    
     return 1;
 }
 
@@ -183,19 +262,13 @@ struct dongle_packet_handlers* dongle_open_port(char* serialPort)
         return NULL;
     }
 
-    // Set required port options
-    tty.c_cflag &= ~PARENB; // No parity
-    tty.c_cflag &= ~CSTOPB; // 1 stop bit
-    tty.c_cflag |= CS8; // 8 bits/byte
-    tty.c_cflag &= ~CRTSCTS; // no flow control
-    tty.c_cflag |= CREAD | CLOCAL; // Ignore control lines
-    tty.c_lflag &= ~ICANON; // Disable canonical mode (read w/o waiting for newline)
-
-    // Turn off any options that might interfere with our ability to send and
-    // receive raw binary bytes.
-    tty.c_iflag &= ~(INLCR | IGNCR | ICRNL | IXON | IXOFF);
-    tty.c_oflag &= ~(ONLCR | OCRNL);
-    tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+    // Set required options to make it a raw port.
+    tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity
+    tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication
+    tty.c_cflag |= CS8; // 8 bits per byte
+    tty.c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control
+    tty.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
+    tty.c_lflag &= ~ICANON; // Disable canonical mode
     tty.c_lflag &= ~ECHO; // Disable echo
     tty.c_lflag &= ~ECHOE; // Disable erasure
     tty.c_lflag &= ~ECHONL; // Disable new-line echo
@@ -204,7 +277,8 @@ struct dongle_packet_handlers* dongle_open_port(char* serialPort)
     tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
     tty.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
     tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
-    tty.c_cc[VTIME] = 0; // no wait
+    
+    tty.c_cc[VTIME] = 0; // wait as long as needed to receive at least 1 byte
     tty.c_cc[VMIN] = 1; 
     cfsetispeed(&tty, 921600);
     cfsetospeed(&tty, 921600);
