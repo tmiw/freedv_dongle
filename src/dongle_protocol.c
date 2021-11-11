@@ -61,13 +61,14 @@ static unpack_fn_t packet_unpack_fn[] = {
 
 static int send_packet_common(struct dongle_packet_handlers* handlers, struct dongle_packet* packet)
 {
-    char tmpbuf[
+    char* tmpbuf = malloc(
         sizeof(packet->magic_number) + 
         sizeof(packet->version) +
         sizeof(packet->type) +
         sizeof(packet->length) +
-        packet->length];
-    
+        packet->length);
+    if (tmpbuf == NULL) return 0;
+
     packet->magic_number = DONGLE_MAGIC_NUMBER;
     packet->version = 1;
     
@@ -94,13 +95,18 @@ static int send_packet_common(struct dongle_packet_handlers* handlers, struct do
     while (bytes_to_write > 0)
     {
         int nwritten = (*handlers->write_fn)(handlers, pBuf, bytes_to_write);
-        if (nwritten <= 0) return 0;
+        if (nwritten <= 0)
+        {
+             free(tmpbuf);
+             return 0;
+        }
         bytes_to_write -= nwritten;
         pBuf += nwritten;
     }
 
     (*handlers->flush_packet_fn)(handlers);
 
+    free(tmpbuf);
     return 1;
 }
 
@@ -237,7 +243,7 @@ static void usb_flush_data(struct dongle_packet_handlers* hndl)
 
 struct dongle_packet_handlers* dongle_open_port(char* serialPort)
 {
-    struct dongle_packet_handlers* retVal = malloc(sizeof(struct dongle_packet_handlers*));
+    struct dongle_packet_handlers* retVal = malloc(sizeof(struct dongle_packet_handlers));
     if (retVal == NULL)
     {
         return NULL;
@@ -290,7 +296,7 @@ struct dongle_packet_handlers* dongle_open_port(char* serialPort)
         return NULL;
     }
     
-    retVal->state = serialPort;
+    retVal->state = portSocket;
     return retVal;
 }
 
