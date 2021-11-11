@@ -191,7 +191,7 @@ int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* p
     }
     
     // Copy length to result packet and use that to read in the rest.
-    pBuf = &tmpbuf[0];
+    pBuf = &tmpbuf[sizeof(packet->magic_number)];
     memcpy(&packet->version, pBuf, sizeof(packet->version));
     pBuf += sizeof(packet->version);
     memcpy(&packet->type, pBuf, sizeof(packet->type));
@@ -200,6 +200,7 @@ int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* p
     pBuf += sizeof(packet->length);
     
     bytes_to_read = packet->length;
+    char* tmp = pBuf;
     while(bytes_to_read > 0)
     {
         int nbytes = (*handlers->read_fn)(handlers, pBuf, bytes_to_read);
@@ -207,6 +208,7 @@ int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* p
         bytes_to_read -= nbytes;
         pBuf += nbytes;
     }
+    pBuf = tmp;
 
     // Unpack packet body, if needed.
     if (packet_unpack_fn[packet->type])

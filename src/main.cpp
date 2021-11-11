@@ -12,21 +12,22 @@ static struct freedv* fdv = nullptr;
 static ringbuf_t audio_input_buf = nullptr;
 static ringbuf_t audio_output_buf = nullptr;
 static bool in_transmit = false;
-static int read_ctr = 1;
+//static int read_ctr = 1;
 
 static int usb_read_data(struct dongle_packet_handlers* hndl, void* ptr, int size)
 {
+    //SerialUSB1.printf("usb_read_data(%x, %x, %d)\r\n", hndl, ptr, size);
     int numRead = Serial.readBytes((char*)ptr, size);
-    for (int i = 0; i < numRead; i++, read_ctr++)
-    {
-        SerialUSB1.printf("%x ", ((char*)ptr)[i]);
-        if (!(read_ctr & 0xF)) SerialUSB1.printf("\n");
-    }
     return numRead;
 }
 
 static int usb_write_data(struct dongle_packet_handlers* hdnl, void* ptr, int size)
 {
+    /*for (int i = 0; i < size; i++, read_ctr++)
+    {
+        SerialUSB1.printf("%x ", ((char*)ptr)[i]);
+        if (!(read_ctr & 0xF)) SerialUSB1.printf("\n");
+    }*/
     return Serial.write((char*)ptr, size);
 }
 
@@ -64,8 +65,10 @@ static void handle_incoming_messages()
     struct dongle_packet packet;
     bool send_ack = true;
     
-    if (read_packet(&arduino_dongle_packet_handlers, &packet) > 0)
-    {        
+    if (Serial.available() && read_packet(&arduino_dongle_packet_handlers, &packet) > 0)
+    {
+        //SerialUSB1.printf("got packet %d\r\n", packet.type);
+        
         // Handle request depending on the packet type.
         switch(packet.type)
         {
@@ -101,6 +104,8 @@ static void handle_incoming_messages()
         }
         
         if (send_ack) send_ack_packet(&arduino_dongle_packet_handlers);
+        
+        //SerialUSB1.printf("finished processing packet %d\r\n", packet.type);
     }
 }
 
@@ -115,7 +120,7 @@ static void process_queued_audio()
         input_bytes = freedv_get_n_speech_samples(fdv) * sizeof(short);
         
         // Initialize LED in off state before processing transmit audio.
-        //digitalWrite(ledPin, LOW);
+        digitalWrite(ledPin, LOW);
     }
     else
     {
@@ -128,10 +133,10 @@ static void process_queued_audio()
         if (in_transmit)
         {
             // LED in TX means that we're processing a packet of audio.
-            //digitalWrite(ledPin, HIGH);
+            digitalWrite(ledPin, HIGH);
             freedv_tx(fdv, output_buf, input_buf);
             ringbuf_memcpy_into(audio_output_buf, output_buf, sizeof(short) * freedv_get_n_tx_modem_samples(fdv));
-            //digitalWrite(ledPin, LOW);
+            digitalWrite(ledPin, LOW);
         }
         else
         {
@@ -140,7 +145,7 @@ static void process_queued_audio()
             input_bytes = freedv_nin(fdv) * sizeof(short);
             
             // Update LED to reflect current sync state.
-            //digitalWrite(ledPin, freedv_get_sync(fdv) ? HIGH : LOW);
+            digitalWrite(ledPin, freedv_get_sync(fdv) ? HIGH : LOW);
         }        
     }
 }
@@ -153,11 +158,6 @@ static void transmit_output_audio()
         ringbuf_memcpy_from(buf, audio_output_buf, 256);
         send_audio_packet(&arduino_dongle_packet_handlers, buf);
     }
-}
-
-void serialEvent()
-{
-    handle_incoming_messages();
 }
 
 void serialEventUSB1()
@@ -180,6 +180,7 @@ void setup()
 void loop() 
 {
     // Each action within the loop is a separate function for readability.
+    handle_incoming_messages();
     process_queued_audio();
     transmit_output_audio();
 }
