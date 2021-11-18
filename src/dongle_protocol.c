@@ -125,7 +125,7 @@ int send_audio_packet(struct dongle_packet_handlers* handlers, int16_t* audio)
     struct dongle_packet packet;
 
     packet.type = DONGLE_PACKET_AUDIO;
-    memcpy(&packet.packet_data.audio_data, audio, DONGLE_AUDIO_LENGTH * sizeof(int16_t));
+    memcpy(&packet.packet_data.audio_data.audio, audio, DONGLE_AUDIO_LENGTH * sizeof(int16_t));
     packet.length = DONGLE_AUDIO_LENGTH * sizeof(int16_t);
 
     return send_packet_common(handlers, &packet);

@@ -54,6 +54,12 @@ static void open_freedv_handle(int mode)
     fdv = freedv_open(mode);
     assert(fdv != nullptr);
     
+    if (mode == FREEDV_MODE_700D || mode == FREEDV_MODE_700E)
+    {
+        freedv_set_tx_bpf(fdv, 1);
+        freedv_set_clip(fdv, 1);
+    }
+    
     audio_input_buf = ringbuf_new(freedv_get_n_speech_samples(fdv) * sizeof(short) * 5);
     assert(audio_input_buf != nullptr);
     audio_output_buf = ringbuf_new(freedv_get_n_tx_modem_samples(fdv) * sizeof(short) * 5);
@@ -152,10 +158,10 @@ static void process_queued_audio()
 
 static void transmit_output_audio()
 {
-    while (ringbuf_bytes_used(audio_output_buf) >= 256)
+    short buf[DONGLE_AUDIO_LENGTH];
+    while (ringbuf_bytes_used(audio_output_buf) >= sizeof(buf))
     {
-        short buf[128];
-        ringbuf_memcpy_from(buf, audio_output_buf, 256);
+        ringbuf_memcpy_from(buf, audio_output_buf, sizeof(buf));
         send_audio_packet(&arduino_dongle_packet_handlers, buf);
     }
 }
