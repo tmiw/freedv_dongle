@@ -60,9 +60,9 @@ static void open_freedv_handle(int mode)
         freedv_set_clip(fdv, 1);
     }
     
-    audio_input_buf = ringbuf_new(freedv_get_n_speech_samples(fdv) * sizeof(short) * 5);
+    audio_input_buf = ringbuf_new(freedv_get_n_speech_samples(fdv) * sizeof(short) * 10);
     assert(audio_input_buf != nullptr);
-    audio_output_buf = ringbuf_new(freedv_get_n_tx_modem_samples(fdv) * sizeof(short) * 5);
+    audio_output_buf = ringbuf_new(freedv_get_n_tx_modem_samples(fdv) * sizeof(short) * 10);
     assert(audio_output_buf != nullptr);
 }
 

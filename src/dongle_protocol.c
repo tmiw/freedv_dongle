@@ -6,14 +6,6 @@
 
 #include "dongle_protocol.h"
 
-// On some embedded devices (e.g. Flex radios), trash ends up at the end of the received packet
-// due to processor errata/kernel bugs. This can impact audio quality. PACKET_ALIGNMENT can help 
-// by sending extra data at the end of the packet. While this is a hack, it should get around that issue.
-//
-// Note: for ALIGN_PACKET_BYTES() to work properly, PACKET_ALIGNMENT must be a power of 2.
-#define PACKET_ALIGNMENT 64
-#define ALIGN_PACKET_BYTES(x) ((x + PACKET_ALIGNMENT) & ~(PACKET_ALIGNMENT - 1))
-
 static void pack_audio_packet(char** pBuf, struct dongle_packet* packet)
 {
     memcpy(*pBuf, &packet->packet_data.audio_data.audio, packet->length);
@@ -69,12 +61,12 @@ static unpack_fn_t packet_unpack_fn[] = {
 
 static int send_packet_common(struct dongle_packet_handlers* handlers, struct dongle_packet* packet)
 {
-    size_t alloc_size = ALIGN_PACKET_BYTES(
+    size_t alloc_size =
         sizeof(packet->magic_number) + 
         sizeof(packet->version) +
         sizeof(packet->type) +
         sizeof(packet->length) +
-        packet->length);
+        packet->length;
     
     char* tmpbuf = malloc(alloc_size);
     if (tmpbuf == NULL) return 0;
