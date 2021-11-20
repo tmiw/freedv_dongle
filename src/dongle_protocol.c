@@ -100,7 +100,7 @@ static int send_packet_common(struct dongle_packet_handlers* handlers, struct do
     }
     
     // Write data over serial port.
-    int bytes_to_write = pBuf - &tmpbuf[0];
+    int bytes_to_write = alloc_size;
     pBuf = &tmpbuf[0];
     while (bytes_to_write > 0)
     {
