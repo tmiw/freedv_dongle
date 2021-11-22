@@ -12,6 +12,8 @@ static struct freedv* fdv = nullptr;
 static ringbuf_t audio_input_buf = nullptr;
 static ringbuf_t audio_output_buf = nullptr;
 static bool in_transmit = false;
+static short* input_buf;
+static short* output_buf;
 //static int read_ctr = 1;
 
 static int usb_read_data(struct dongle_packet_handlers* hndl, void* ptr, int size)
@@ -33,7 +35,7 @@ static int usb_write_data(struct dongle_packet_handlers* hdnl, void* ptr, int si
 
 static void usb_flush_data(struct dongle_packet_handlers* hndl)
 {
-    // empty
+    Serial.send_now();
 }
 
 struct dongle_packet_handlers arduino_dongle_packet_handlers = {
@@ -49,6 +51,8 @@ static void open_freedv_handle(int mode)
         freedv_close(fdv);
         ringbuf_free(&audio_input_buf);
         ringbuf_free(&audio_output_buf);
+        free(input_buf);
+        free(output_buf);
     }
     
     fdv = freedv_open(mode);
@@ -59,11 +63,20 @@ static void open_freedv_handle(int mode)
         freedv_set_tx_bpf(fdv, 1);
         freedv_set_clip(fdv, 1);
     }
-    
-    audio_input_buf = ringbuf_new(freedv_get_n_speech_samples(fdv) * sizeof(short) * 10);
+
+    size_t max_speech_samples = freedv_get_n_max_speech_samples(fdv);
+    size_t max_modem_samples = freedv_get_n_max_modem_samples(fdv);
+    size_t max_sample_size = max_speech_samples > max_modem_samples ? max_speech_samples : max_modem_samples;
+
+    audio_input_buf = ringbuf_new(max_sample_size * sizeof(short) * 10);
     assert(audio_input_buf != nullptr);
-    audio_output_buf = ringbuf_new(freedv_get_n_tx_modem_samples(fdv) * sizeof(short) * 10);
+    audio_output_buf = ringbuf_new(max_sample_size * sizeof(short) * 10);
     assert(audio_output_buf != nullptr);
+        
+    input_buf = (short*)malloc(max_sample_size * sizeof(short));
+    assert(input_buf != nullptr);
+    output_buf = (short*)malloc(max_sample_size * sizeof(short));
+    assert(output_buf != nullptr);
 }
 
 static void handle_incoming_messages()
@@ -117,8 +130,6 @@ static void handle_incoming_messages()
 
 static void process_queued_audio()
 {
-    static short input_buf[2048];
-    static short output_buf[2048];
     size_t input_bytes = 0;
     
     if (in_transmit)
