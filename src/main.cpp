@@ -192,6 +192,19 @@ void setup()
     open_freedv_handle(FREEDV_MODE_700D);
     
     SerialUSB1.printf("freedv_dongle debug console\n");
+    
+    // Let user know we've fully started up (3 fast blinks).
+    digitalWrite(ledPin, HIGH);
+    delay(50);
+    digitalWrite(ledPin, LOW);
+    delay(150);
+    digitalWrite(ledPin, HIGH);
+    delay(50);
+    digitalWrite(ledPin, LOW);
+    delay(150);
+    digitalWrite(ledPin, HIGH);
+    delay(50);
+    digitalWrite(ledPin, LOW);
 }
 
 void loop() 
