@@ -58,12 +58,30 @@ static void open_freedv_handle(int mode)
     fdv = freedv_open(mode);
     assert(fdv != nullptr);
     
+    // 700D/E clipping/BPF
     if (mode == FREEDV_MODE_700D || mode == FREEDV_MODE_700E)
     {
         freedv_set_tx_bpf(fdv, 1);
         freedv_set_clip(fdv, 1);
     }
-
+    
+    // Default squelch settings
+    float squelchDb = 0.0f;
+    switch(mode)
+    {
+        case FREEDV_MODE_700D:
+            squelchDb = -2.0f;
+            break;
+        case FREEDV_MODE_700E:
+            squelchDb = 1.0f;
+            break;
+        case FREEDV_MODE_1600:
+            squelchDb = 4.0f;
+            break;
+    }
+    freedv_set_squelch_en(fdv, 1);
+    freedv_set_snr_squelch_thresh(fdv, squelchDb);
+    
     size_t max_speech_samples = freedv_get_n_max_speech_samples(fdv);
     size_t max_modem_samples = freedv_get_n_max_modem_samples(fdv);
     size_t max_sample_size = max_speech_samples > max_modem_samples ? max_speech_samples : max_modem_samples;
