@@ -112,25 +112,11 @@ int main(int argc, char** argv)
         exit(-1);
     }
 
-    // Place the dongle in the appropriate state first.
-    if (in_tx)
-    {
-        send_switch_tx_mode_packet(serialPort);
-    }
-    else if (in_rx)
-    {
-        send_switch_rx_mode_packet(serialPort);
-    }
-    
-    struct dongle_packet packet;
-    
-    // Wait for ack
-    while (read_packet(serialPort, &packet) <= 0) { }
-    assert(packet.type == DONGLE_PACKET_ACK);
-    
+    // Place dongle in correct mode first.
     send_set_fdv_mode_packet(serialPort, mode);
 
     // Wait for ack
+    struct dongle_packet packet;
     while (read_packet(serialPort, &packet) <= 0) { }
     assert(packet.type == DONGLE_PACKET_ACK);
     
@@ -139,7 +125,7 @@ int main(int argc, char** argv)
 
     while(read(inputFile, bufIn, bufSize*sizeof(short)) > 0)
     {
-        send_audio_packet(serialPort, bufIn);
+        send_audio_packet(serialPort, bufIn, in_tx);
 
         // Get anything else on the line before we send another packet
         while (dongle_has_data_available(serialPort, 0, 0))

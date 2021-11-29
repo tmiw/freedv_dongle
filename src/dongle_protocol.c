@@ -39,8 +39,7 @@ typedef void (*pack_fn_t)(char**, struct dongle_packet*);
 typedef void (*unpack_fn_t)(char*, struct dongle_packet*);
 static pack_fn_t packet_pack_fn[] = {
     pack_audio_packet,
-    NULL,
-    NULL,
+    pack_audio_packet,
     NULL,
     NULL,
     pack_version_resp_packet,
@@ -50,8 +49,7 @@ static pack_fn_t packet_pack_fn[] = {
 
 static unpack_fn_t packet_unpack_fn[] = {
     unpack_audio_packet,
-    NULL,
-    NULL,
+    unpack_audio_packet,
     NULL,
     NULL,
     NULL,
@@ -122,33 +120,13 @@ int send_ack_packet(struct dongle_packet_handlers* handlers)
     return send_packet_common(handlers, &packet);
 }
 
-int send_audio_packet(struct dongle_packet_handlers* handlers, int16_t* audio)
+int send_audio_packet(struct dongle_packet_handlers* handlers, int16_t* audio, int tx)
 {
     struct dongle_packet packet;
 
-    packet.type = DONGLE_PACKET_AUDIO;
+    packet.type = tx ? DONGLE_PACKET_TX_AUDIO : DONGLE_PACKET_RX_AUDIO;
     memcpy(&packet.packet_data.audio_data.audio, audio, DONGLE_AUDIO_LENGTH * sizeof(int16_t));
     packet.length = DONGLE_AUDIO_LENGTH * sizeof(int16_t);
-
-    return send_packet_common(handlers, &packet);
-}
-
-int send_switch_tx_mode_packet(struct dongle_packet_handlers* handlers)
-{
-    struct dongle_packet packet;
-
-    packet.type = DONGLE_PACKET_SWITCH_TX_MODE;
-    packet.length = 0;
-
-    return send_packet_common(handlers, &packet);
-}
-
-int send_switch_rx_mode_packet(struct dongle_packet_handlers* handlers)
-{
-    struct dongle_packet packet;
-
-    packet.type = DONGLE_PACKET_SWITCH_RX_MODE;
-    packet.length = 0;
 
     return send_packet_common(handlers, &packet);
 }

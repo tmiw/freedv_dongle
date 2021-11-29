@@ -14,6 +14,8 @@ static ringbuf_t audio_output_buf = nullptr;
 static bool in_transmit = false;
 static short* input_buf;
 static short* output_buf;
+static int last_audio_mode_rx = -1;
+
 //static int read_ctr = 1;
 
 static int usb_read_data(struct dongle_packet_handlers* hndl, void* ptr, int size)
@@ -95,6 +97,8 @@ static void open_freedv_handle(int mode)
     assert(input_buf != nullptr);
     output_buf = (short*)malloc(max_sample_size * sizeof(short));
     assert(output_buf != nullptr);
+    
+    last_audio_mode_rx = -1;
 }
 
 static void handle_incoming_messages()
@@ -109,27 +113,25 @@ static void handle_incoming_messages()
         // Handle request depending on the packet type.
         switch(packet.type)
         {
-            case DONGLE_PACKET_AUDIO:
+            case DONGLE_PACKET_RX_AUDIO:
+            case DONGLE_PACKET_TX_AUDIO:
             {
                 // Inbound audio to be processed. Append to ring buffer for later handling.
+                if (last_audio_mode_rx != packet.type)
+                {
+                    ringbuf_reset(audio_input_buf);
+                    ringbuf_reset(audio_output_buf);
+                    last_audio_mode_rx = packet.type;
+                }
+                in_transmit = packet.type == DONGLE_PACKET_TX_AUDIO;
                 ringbuf_memcpy_into(audio_input_buf, packet.packet_data.audio_data.audio, packet.length);
                 send_ack = false;
-                break;
-            }
-            case DONGLE_PACKET_SWITCH_TX_MODE:
-            case DONGLE_PACKET_SWITCH_RX_MODE:
-            {
-                // Switch in or out of TX mode. Queued audio will also be cleared so we can
-                // immediately start processing inbound data in the new mode.
-                in_transmit = packet.type == DONGLE_PACKET_SWITCH_TX_MODE;
-                ringbuf_reset(audio_input_buf);
                 break;
             }
             case DONGLE_PACKET_SET_FDV_MODE:
             {
                 // Reopen FDV handle using new mode.
                 open_freedv_handle(packet.packet_data.fdv_mode_data.mode);
-                ringbuf_reset(audio_input_buf);
                 break;
             }
             default:
@@ -191,7 +193,7 @@ static void transmit_output_audio()
     while (ringbuf_bytes_used(audio_output_buf) >= sizeof(buf))
     {
         ringbuf_memcpy_from(buf, audio_output_buf, sizeof(buf));
-        send_audio_packet(&arduino_dongle_packet_handlers, buf);
+        send_audio_packet(&arduino_dongle_packet_handlers, buf, in_transmit);
     }
 }
 

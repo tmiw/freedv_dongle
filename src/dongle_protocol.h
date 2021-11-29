@@ -10,14 +10,13 @@ extern "C" {
 #define DONGLE_MAGIC_NUMBER 0x46445644    // FDVD
 #define DONGLE_AUDIO_LENGTH 128
 
-#define DONGLE_PACKET_AUDIO 0
-#define DONGLE_PACKET_ACK 1
-#define DONGLE_PACKET_SWITCH_TX_MODE 2
-#define DONGLE_PACKET_SWITCH_RX_MODE 3
-#define DONGLE_PACKET_REQ_VERSION 4
-#define DONGLE_PACKET_RES_VERSION 5
-#define DONGLE_PACKET_SET_FDV_MODE 6
-#define DONGLE_PACKET_NACK 7
+#define DONGLE_PACKET_RX_AUDIO 0
+#define DONGLE_PACKET_TX_AUDIO 1
+#define DONGLE_PACKET_ACK 2
+#define DONGLE_PACKET_REQ_VERSION 3
+#define DONGLE_PACKET_RES_VERSION 4
+#define DONGLE_PACKET_SET_FDV_MODE 5
+#define DONGLE_PACKET_NACK 6
     
 // Matches freedv_api.h.
 #define DONGLE_MODE_700D 7
@@ -54,11 +53,9 @@ struct dongle_packet
     } packet_data;
 };
 
-int send_switch_tx_mode_packet(struct dongle_packet_handlers* handlers);
-int send_switch_rx_mode_packet(struct dongle_packet_handlers* handlers);
 int send_set_fdv_mode_packet(struct dongle_packet_handlers* handlers, int mode);
 int send_ack_packet(struct dongle_packet_handlers* handlers);
-int send_audio_packet(struct dongle_packet_handlers* handlers, int16_t* audio);
+int send_audio_packet(struct dongle_packet_handlers* handlers, int16_t* audio, int tx);
 int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* packet);
 
 #if defined(__linux__) || defined(__APPLE__)
