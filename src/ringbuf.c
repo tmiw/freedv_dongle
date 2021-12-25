@@ -15,6 +15,7 @@
 
 #include "ringbuf.h"
 
+#include <Arduino.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,16 +42,16 @@ struct ringbuf_priv_t
 ringbuf_t
 ringbuf_new(size_t capacity)
 {
-    ringbuf_t rb = malloc(sizeof(struct ringbuf_priv_t));
+    ringbuf_t rb = extmem_malloc(sizeof(struct ringbuf_priv_t));
     if (rb) {
 
         /* One byte is used for detecting the full condition. */
         rb->size = capacity + 1;
-        rb->buf = malloc(rb->size);
+        rb->buf = extmem_malloc(rb->size);
         if (rb->buf)
             ringbuf_reset(rb);
         else {
-            free(rb);
+            extmem_free(rb);
             return 0;
         }
     }
@@ -73,8 +74,8 @@ void
 ringbuf_free(ringbuf_t *rb)
 {
     assert(rb && *rb);
-    free((*rb)->buf);
-    free(*rb);
+    extmem_free((*rb)->buf);
+    extmem_free(*rb);
     *rb = 0;
 }
 
