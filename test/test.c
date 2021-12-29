@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         exit(-1);
     }
 
-    // Open input and output files and send/receive from the Pico
+    // Open input and output files and send/receive from the Teensy
     int inputFile = open(input_file, O_RDONLY);
     if (inputFile < 0)
     {
