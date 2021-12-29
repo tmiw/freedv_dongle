@@ -157,7 +157,7 @@ static void process_queued_audio()
         input_bytes = freedv_get_n_speech_samples(fdv) * sizeof(short);
         
         // Initialize LED in off state before processing transmit audio.
-        //digitalWrite(ledPin, LOW);
+        digitalWrite(ledPin, LOW);
     }
     else
     {
@@ -170,10 +170,10 @@ static void process_queued_audio()
         if (in_transmit)
         {
             // LED in TX means that we're processing a packet of audio.
-            //digitalWrite(ledPin, HIGH);
+            digitalWrite(ledPin, HIGH);
             freedv_tx(fdv, output_buf, input_buf);
             ringbuf_memcpy_into(audio_output_buf, output_buf, sizeof(short) * freedv_get_n_tx_modem_samples(fdv));
-            //digitalWrite(ledPin, LOW);
+            digitalWrite(ledPin, LOW);
         }
         else
         {
@@ -182,7 +182,7 @@ static void process_queued_audio()
             input_bytes = freedv_nin(fdv) * sizeof(short);
             
             // Update LED to reflect current sync state.
-            //digitalWrite(ledPin, freedv_get_sync(fdv) ? HIGH : LOW);
+            digitalWrite(ledPin, freedv_get_sync(fdv) ? HIGH : LOW);
         }        
     }
 }
@@ -192,10 +192,10 @@ static void transmit_output_audio()
     short buf[DONGLE_AUDIO_LENGTH];
     while (ringbuf_bytes_used(audio_output_buf) >= sizeof(buf))
     {
-        digitalWrite(ledPin, HIGH);
+        //digitalWrite(ledPin, HIGH);
         ringbuf_memcpy_from(buf, audio_output_buf, sizeof(buf));
         send_audio_packet(&arduino_dongle_packet_handlers, buf, in_transmit);
-        digitalWrite(ledPin, LOW);
+        //digitalWrite(ledPin, LOW);
     }
 }
 
