@@ -9,7 +9,8 @@ extern "C" {
 
 #define DONGLE_MAGIC_NUMBER 0x46445644    // FDVD
 #define DONGLE_AUDIO_LENGTH 128
-
+#define DONGLE_CALLSIGN_LENGTH 16
+    
 #define DONGLE_PACKET_RX_AUDIO 0
 #define DONGLE_PACKET_TX_AUDIO 1
 #define DONGLE_PACKET_ACK 2
@@ -17,6 +18,7 @@ extern "C" {
 #define DONGLE_PACKET_RES_VERSION 4
 #define DONGLE_PACKET_SET_FDV_MODE 5
 #define DONGLE_PACKET_NACK 6
+#define DONGLE_PACKET_SET_CALLSIGN 7
     
 // Matches freedv_api.h.
 #define DONGLE_MODE_700D 7
@@ -50,11 +52,15 @@ struct dongle_packet
         struct {
             uint32_t mode;
         } fdv_mode_data;
+        struct {
+            uint8_t callsign[DONGLE_CALLSIGN_LENGTH];
+        } fdv_callsign_data;
     } packet_data;
 };
 
 int send_set_fdv_mode_packet(struct dongle_packet_handlers* handlers, int mode);
 int send_ack_packet(struct dongle_packet_handlers* handlers);
+int send_callsign_packet(struct dongle_packet_handlers* handlers, char* callsign);
 int send_audio_packet(struct dongle_packet_handlers* handlers, int16_t* audio, int tx);
 int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* packet);
 

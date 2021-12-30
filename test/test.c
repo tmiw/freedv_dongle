@@ -10,12 +10,13 @@
 
 static void print_usage(char* appname)
 {
-    fprintf(stderr, "Usage: %s [-h] [-m mode] -r|-t -p [serial port] -i [input file] -o [output file]\n", appname);
+    fprintf(stderr, "Usage: %s [-h] [-m mode] -r|-t -p [serial port] -c [callsign] -i [input file] -o [output file]\n", appname);
     fprintf(stderr, "    -h: This help message\n");
     fprintf(stderr, "    -m: The FreeDV mode to use (700D, 700E or 1600). Defaults to 700D.\n");
     fprintf(stderr, "    -r: Places the dongle in receive mode (this or -t required).\n");
     fprintf(stderr, "    -t: Places the dongle in transmit mode (this or -r required).\n");
     fprintf(stderr, "    -p: The serial port to use to communicate with the dongle (required).\n");
+    fprintf(stderr, "    -c: The callsign to encode in the transmission.\n");
     fprintf(stderr, "    -i: The input file to process (required; 8KHz int16 raw samples).\n");
     fprintf(stderr, "    -o: The file to write output to (required; 8KHz int16 raw samples).\n");
 }
@@ -29,8 +30,9 @@ int main(int argc, char** argv)
     char* input_file = NULL;
     char* output_file = NULL;
     char* serial_port = NULL;
+    char* callsign = NULL;
     
-    while ((opt = getopt(argc, argv, "hrtm:i:o:p:")) != -1) 
+    while ((opt = getopt(argc, argv, "hrtm:i:o:p:c:")) != -1) 
     {
         switch(opt)
         {
@@ -73,6 +75,11 @@ int main(int argc, char** argv)
                 serial_port = malloc(strlen(optarg) + 1);
                 assert(serial_port != NULL);
                 strcpy(serial_port, optarg);
+                break;
+            case 'c':
+                callsign = malloc(strlen(optarg) + 1);
+                assert(callsign != NULL);
+                strcpy(callsign, optarg);
                 break;
             case 'h':
             default:
@@ -119,6 +126,14 @@ int main(int argc, char** argv)
     struct dongle_packet packet;
     while (read_packet(serialPort, &packet) <= 0) { }
     assert(packet.type == DONGLE_PACKET_ACK);
+    
+    // If a callsign is passed in, pass it along as well.
+    if (callsign != NULL)
+    {
+        send_callsign_packet(serialPort, callsign);
+        while (read_packet(serialPort, &packet) <= 0) { }
+        assert(packet.type == DONGLE_PACKET_ACK);
+    }
     
     int bufSize = 128;
     short bufIn[bufSize];

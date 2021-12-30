@@ -23,6 +23,12 @@ static void pack_mode_switch_packet(char** pBuf, struct dongle_packet* packet)
     *pBuf += sizeof(packet->packet_data.fdv_mode_data.mode);
 }
 
+static void pack_callsign_packet(char** pBuf, struct dongle_packet* packet)
+{
+    memcpy(*pBuf, &packet->packet_data.fdv_callsign_data.callsign, packet->length);
+    *pBuf += packet->length;
+}
+
 static void unpack_audio_packet(char* pBuf, struct dongle_packet* packet)
 {
     memcpy(&packet->packet_data.audio_data.audio, pBuf, packet->length);
@@ -35,6 +41,12 @@ static void unpack_mode_switch_packet(char* pBuf, struct dongle_packet* packet)
     pBuf += sizeof(packet->packet_data.fdv_mode_data.mode);
 }
 
+static void unpack_callsign_packet(char* pBuf, struct dongle_packet* packet)
+{
+    memcpy(&packet->packet_data.fdv_callsign_data.callsign, pBuf, packet->length);
+    pBuf += packet->length;
+}
+
 typedef void (*pack_fn_t)(char**, struct dongle_packet*);
 typedef void (*unpack_fn_t)(char*, struct dongle_packet*);
 static pack_fn_t packet_pack_fn[] = {
@@ -44,7 +56,8 @@ static pack_fn_t packet_pack_fn[] = {
     NULL,
     pack_version_resp_packet,
     pack_mode_switch_packet,
-    NULL
+    NULL,
+    pack_callsign_packet,
 };
 
 static unpack_fn_t packet_unpack_fn[] = {
@@ -54,7 +67,8 @@ static unpack_fn_t packet_unpack_fn[] = {
     NULL,
     NULL,
     unpack_mode_switch_packet,
-    NULL
+    NULL,
+    unpack_callsign_packet,
 };
 
 static int send_packet_common(struct dongle_packet_handlers* handlers, struct dongle_packet* packet)
@@ -138,6 +152,18 @@ int send_set_fdv_mode_packet(struct dongle_packet_handlers* handlers, int mode)
     packet.type = DONGLE_PACKET_SET_FDV_MODE;
     packet.packet_data.fdv_mode_data.mode = mode;
     packet.length = sizeof(packet.packet_data.fdv_mode_data);
+
+    return send_packet_common(handlers, &packet);
+}
+
+int send_callsign_packet(struct dongle_packet_handlers* handlers, char* callsign)
+{
+    struct dongle_packet packet;
+
+    packet.type = DONGLE_PACKET_SET_CALLSIGN;
+    memset(&packet.packet_data.fdv_callsign_data, 0, DONGLE_CALLSIGN_LENGTH);
+    strncpy((char*)&packet.packet_data.fdv_callsign_data, callsign, DONGLE_CALLSIGN_LENGTH - 1);
+    packet.length = DONGLE_CALLSIGN_LENGTH * sizeof(uint8_t);
 
     return send_packet_common(handlers, &packet);
 }

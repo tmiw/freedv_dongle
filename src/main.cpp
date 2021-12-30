@@ -5,6 +5,7 @@
 
 #include "ringbuf.h"
 #include "freedv_api.h"
+#include "reliable_text.h"
 
 const int ledPin = 13;
 
@@ -15,6 +16,12 @@ static bool in_transmit = false;
 static short* input_buf;
 static short* output_buf;
 static int last_audio_mode_rx = -1;
+static reliable_text_t reliable_text_obj = nullptr;
+
+static void reliable_text_rx_fn(reliable_text_t rt, const char* txt_ptr, int length, void* state)
+{
+    // empty
+}
 
 //static int read_ctr = 1;
 
@@ -50,6 +57,13 @@ static void open_freedv_handle(int mode)
 {
     if (fdv != nullptr)
     {
+        if (reliable_text_obj != nullptr)
+        {
+            reliable_text_unlink_from_freedv(reliable_text_obj);
+            reliable_text_destroy(reliable_text_obj);
+            reliable_text_obj = nullptr;
+        }
+        
         freedv_close(fdv);
         ringbuf_free(&audio_input_buf);
         ringbuf_free(&audio_output_buf);
@@ -132,6 +146,24 @@ static void handle_incoming_messages()
             {
                 // Reopen FDV handle using new mode.
                 open_freedv_handle(packet.packet_data.fdv_mode_data.mode);
+                break;
+            }
+            case DONGLE_PACKET_SET_CALLSIGN:
+            {
+                if (reliable_text_obj == nullptr)
+                {
+                    reliable_text_obj = reliable_text_create();
+                    assert(reliable_text_obj);
+                    reliable_text_use_with_freedv(reliable_text_obj, fdv, reliable_text_rx_fn, nullptr);
+                }
+                
+                reliable_text_set_string(
+                    reliable_text_obj, 
+                    (char*)packet.packet_data.fdv_callsign_data.callsign, 
+                    strlen((char*)packet.packet_data.fdv_callsign_data.callsign));
+                reliable_text_reset(reliable_text_obj);
+                
+                SerialUSB1.printf("Callsign set to %s\n", packet.packet_data.fdv_callsign_data.callsign);
                 break;
             }
             default:
