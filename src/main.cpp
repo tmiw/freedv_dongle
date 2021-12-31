@@ -20,7 +20,7 @@ static reliable_text_t reliable_text_obj = nullptr;
 
 static void reliable_text_rx_fn(reliable_text_t rt, const char* txt_ptr, int length, void* state)
 {
-    // empty
+    reliable_text_reset(rt);
 }
 
 //static int read_ctr = 1;
