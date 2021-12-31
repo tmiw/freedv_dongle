@@ -247,7 +247,33 @@ int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* p
 static int usb_read_data(struct dongle_packet_handlers* hndl, void* ptr, int size)
 {
     int sock = (int)hndl->state;
-    return read(sock, ptr, size);
+    
+    struct termios tty;
+    if(tcgetattr(sock, &tty) != 0) 
+    {
+        fprintf(stderr, "warning: could not get termios values\n");
+        return read(sock, ptr, size);
+    }
+    
+    tty.c_cc[VTIME] = 0;
+    tty.c_cc[VMIN] = size; 
+
+    if (tcsetattr(sock, TCSANOW, &tty) != 0)
+    {
+        fprintf(stderr, "warning: could not get termios values\n");
+    }
+    
+    int result = read(sock, ptr, size);
+    
+    tty.c_cc[VTIME] = 0;
+    tty.c_cc[VMIN] = 1; 
+
+    if (tcsetattr(sock, TCSANOW, &tty) != 0)
+    {
+        fprintf(stderr, "warning: could not restore termios values\n");
+    }
+    
+    return result;
 }
 
 static int usb_write_data(struct dongle_packet_handlers* hndl, void* ptr, int size)
