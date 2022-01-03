@@ -272,7 +272,7 @@ static int usb_read_data(struct dongle_packet_handlers* hndl, void* ptr, int siz
     {
         fprintf(stderr, "warning: could not restore termios values\n");
     }
-    
+
     return result;
 }
 

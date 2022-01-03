@@ -128,7 +128,7 @@ int main(int argc, char** argv)
             }
         
             // Pause between packets
-            //usleep(sleep_time);
+            usleep(sleep_time);
         }
 
         // Wait for any remaining data on the port.
@@ -142,7 +142,7 @@ int main(int argc, char** argv)
             encoded_audio_size += sizeof(short)*packet.length;
         
             // Pause between packets
-            //usleep(sleep_time);
+            usleep(sleep_time);
         }
         
         if (expected_audio_size != encoded_audio_size && expected_audio_size != 0)
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
             }
         
             // Pause between packets
-            //usleep(sleep_time);
+            usleep(sleep_time);
             
             ptr += sizeof(short)*128;
         }
@@ -190,7 +190,7 @@ int main(int argc, char** argv)
             }
         
             // Pause between packets
-            //usleep(sleep_time);
+            usleep(sleep_time);
             
             ptr += sizeof(short)*128;
         }
