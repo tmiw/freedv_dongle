@@ -1,6 +1,7 @@
 [submodule "3rdparty/cores"]
 	path = 3rdparty/cores
 	url = https://github.com/tsandmann/teensy-cores.git
+	branch = ts
 [submodule "3rdparty/freertos"]
 	path = 3rdparty/freertos
 	url = https://github.com/tsandmann/freertos-teensy.git
