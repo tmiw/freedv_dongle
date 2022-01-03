@@ -1,6 +1,12 @@
 #include <Arduino.h>
 #include <assert.h>
 
+#include "arduino_freertos.h"
+#include "avr/pgmspace.h"
+
+#include <mutex>
+#include <condition_variable>
+
 #include "dongle_protocol.h"
 
 #include "ringbuf.h"
@@ -44,7 +50,7 @@ static int usb_write_data(struct dongle_packet_handlers* hdnl, void* ptr, int si
 
 static void usb_flush_data(struct dongle_packet_handlers* hndl)
 {
-    Serial.send_now();
+    //Serial.send_now();
 }
 
 struct dongle_packet_handlers arduino_dongle_packet_handlers = {
@@ -189,7 +195,7 @@ static void process_queued_audio()
         input_bytes = freedv_get_n_speech_samples(fdv) * sizeof(short);
         
         // Initialize LED in off state before processing transmit audio.
-        digitalWrite(ledPin, LOW);
+        ::digitalWrite(ledPin, arduino::LOW);
     }
     else
     {
@@ -202,10 +208,10 @@ static void process_queued_audio()
         if (in_transmit)
         {
             // LED in TX means that we're processing a packet of audio.
-            digitalWrite(ledPin, HIGH);
+            ::digitalWrite(ledPin, arduino::HIGH);
             freedv_tx(fdv, output_buf, input_buf);
             ringbuf_memcpy_into(audio_output_buf, output_buf, sizeof(short) * freedv_get_n_tx_modem_samples(fdv));
-            digitalWrite(ledPin, LOW);
+            ::digitalWrite(ledPin, arduino::LOW);
         }
         else
         {
@@ -214,7 +220,7 @@ static void process_queued_audio()
             input_bytes = freedv_nin(fdv) * sizeof(short);
             
             // Update LED to reflect current sync state.
-            digitalWrite(ledPin, freedv_get_sync(fdv) ? HIGH : LOW);
+            ::digitalWrite(ledPin, freedv_get_sync(fdv) ? arduino::HIGH : arduino::LOW);
         }        
     }
 }
@@ -231,41 +237,61 @@ static void transmit_output_audio()
     }
 }
 
-void serialEventUSB1()
+std::mutex freeDvMtx;
+std::condition_variable freeDvCV;
+
+void serialTask(void*)
 {
-    int x = SerialUSB1.read();
-    if (x == '\r' || x == '\n')
+    while(true)
     {
-        SerialUSB1.println("still alive\r\n");
+        {
+            std::unique_lock<std::mutex> lk(freeDvMtx);
+            handle_incoming_messages();
+            transmit_output_audio();
+            freeDvCV.notify_one();
+        }
     }
 }
 
-void setup()
-{ 
-    pinMode(ledPin, OUTPUT);    
-    open_freedv_handle(FREEDV_MODE_700D);
-    
-    SerialUSB1.printf("freedv_dongle debug console\n");
+void freedvTask(void*)
+{
+    while(true)
+    {
+        {
+            std::unique_lock<std::mutex> lk(freeDvMtx);
+            freeDvCV.wait(lk);
+            process_queued_audio();
+        }
+    }
+}
+
+FLASHMEM __attribute__((noinline)) void setup() {
+    ::pinMode(arduino::LED_BUILTIN, arduino::OUTPUT);
     
     // Let user know we've fully started up (3 fast blinks).
-    digitalWrite(ledPin, HIGH);
-    delay(50);
-    digitalWrite(ledPin, LOW);
-    delay(150);
-    digitalWrite(ledPin, HIGH);
-    delay(50);
-    digitalWrite(ledPin, LOW);
-    delay(150);
-    digitalWrite(ledPin, HIGH);
-    delay(50);
-    digitalWrite(ledPin, LOW);
+    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::HIGH);
+    ::delay(50);
+    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::LOW);
+    ::delay(150);
+    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::HIGH);
+    ::delay(50);
+    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::LOW);
+    ::delay(150);
+    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::HIGH);
+    ::delay(50);
+    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::LOW);
+    ::delay(150);
+    
+    open_freedv_handle(FREEDV_MODE_700D);
+    
+    ::xTaskCreate(serialTask, "serialTask", 32767, nullptr, 2, nullptr);
+    ::xTaskCreate(freedvTask, "freedvTask", 32767, nullptr, 2, nullptr);
+    
+    ::vTaskStartScheduler();
 }
 
 void loop() 
 {
-    // Each action within the loop is a separate function for readability.
-    handle_incoming_messages();
-    process_queued_audio();
-    transmit_output_audio();
+    // empty
 }
 

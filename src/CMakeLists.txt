@@ -72,4 +72,4 @@ add_custom_command(TARGET freedv-dongle
     COMMAND ${CMAKE_OBJCOPY} ARGS -O ihex freedv-dongle freedv-dongle.hex
 )
 
-target_link_libraries(freedv-dongle teensy4 codec2 CMSISDSP)
+target_link_libraries(freedv-dongle teensy4 teensy4_freertos codec2 CMSISDSP)
