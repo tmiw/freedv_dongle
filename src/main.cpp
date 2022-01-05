@@ -1,11 +1,8 @@
-#include <Arduino.h>
-#include <assert.h>
 
 #include "arduino_freertos.h"
 #include "avr/pgmspace.h"
-
-#include <mutex>
-#include <condition_variable>
+#include "queue.h"
+#include <assert.h>
 
 #include "dongle_protocol.h"
 
@@ -228,61 +225,80 @@ static void process_queued_audio()
 static void transmit_output_audio()
 {
     short buf[DONGLE_AUDIO_LENGTH];
+    bool flush = false;
     while (ringbuf_bytes_used(audio_output_buf) >= sizeof(buf))
     {
+        flush = true;
         //digitalWrite(ledPin, HIGH);
         ringbuf_memcpy_from(buf, audio_output_buf, sizeof(buf));
         send_audio_packet(&arduino_dongle_packet_handlers, buf, in_transmit);
         //digitalWrite(ledPin, LOW);
     }
+    if (flush)
+    {
+        Serial.send_now();
+    }
+        
 }
 
-std::mutex freeDvMtx;
-std::condition_variable freeDvCV;
+static QueueHandle_t serialTaskQueue = nullptr;
+static QueueHandle_t freedvTaskQueue = nullptr;
 
-void serialTask(void*)
+static void serialTask(void*)
 {
     while(true)
     {
+        handle_incoming_messages();
+        
+        // Wake up FreeDV thread and wait for it to come back
         {
-            std::unique_lock<std::mutex> lk(freeDvMtx);
-            handle_incoming_messages();
-            transmit_output_audio();
-            freeDvCV.notify_one();
+            int tmp = 0;
+            ::xQueueSendToBack(freedvTaskQueue, &tmp, 0);
+            ::xQueueReceive(serialTaskQueue, &tmp, pdMS_TO_TICKS(10));
         }
+        
+        transmit_output_audio();
     }
 }
 
-void freedvTask(void*)
+static void freedvTask(void*)
 {
     while(true)
     {
+        int tmp = 0;
+        if (::xQueueReceive(freedvTaskQueue, &tmp, pdMS_TO_TICKS(10)) == pdTRUE)
         {
-            std::unique_lock<std::mutex> lk(freeDvMtx);
-            freeDvCV.wait(lk);
             process_queued_audio();
         }
+        ::xQueueSendToBack(serialTaskQueue, &tmp, 0);
     }
 }
 
 FLASHMEM __attribute__((noinline)) void setup() {
+    ::Serial.begin(115'200);
     ::pinMode(arduino::LED_BUILTIN, arduino::OUTPUT);
     
     // Let user know we've fully started up (3 fast blinks).
-    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::HIGH);
+    ::digitalWrite(arduino::LED_BUILTIN, arduino::HIGH);
     ::delay(50);
-    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::LOW);
+    ::digitalWrite(arduino::LED_BUILTIN, arduino::LOW);
     ::delay(150);
-    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::HIGH);
+    ::digitalWrite(arduino::LED_BUILTIN, arduino::HIGH);
     ::delay(50);
-    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::LOW);
+    ::digitalWrite(arduino::LED_BUILTIN, arduino::LOW);
     ::delay(150);
-    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::HIGH);
+    ::digitalWrite(arduino::LED_BUILTIN, arduino::HIGH);
     ::delay(50);
-    ::digitalWriteFast(arduino::LED_BUILTIN, arduino::LOW);
+    ::digitalWrite(arduino::LED_BUILTIN, arduino::LOW);
     ::delay(150);
     
     open_freedv_handle(FREEDV_MODE_700D);
+    
+    freedvTaskQueue = ::xQueueCreate(1, sizeof(int));
+    assert(freedvTaskQueue != nullptr);
+        
+    serialTaskQueue = ::xQueueCreate(1, sizeof(int));
+    assert(serialTaskQueue != nullptr);
     
     ::xTaskCreate(serialTask, "serialTask", 32767, nullptr, 2, nullptr);
     ::xTaskCreate(freedvTask, "freedvTask", 32767, nullptr, 2, nullptr);
@@ -294,4 +310,3 @@ void loop()
 {
     // empty
 }
-
