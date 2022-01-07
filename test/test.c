@@ -135,7 +135,7 @@ int main(int argc, char** argv)
         assert(packet.type == DONGLE_PACKET_ACK);
     }
     
-    int bufSize = 128;
+    int bufSize = DONGLE_AUDIO_LENGTH;
     short bufIn[bufSize];
 
     while(read(inputFile, bufIn, bufSize*sizeof(short)) > 0)

@@ -108,7 +108,7 @@ int main(int argc, char** argv)
     int expected_audio_size = 0;
     while(1)
     {
-        int bufSize = 128;
+        int bufSize = DONGLE_AUDIO_PROTOCOL;
         int sleep_time = 5000; //(1000.0/8000.0)*128*1000;
         short bufIn[bufSize];
 
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
         // Transmit the encoded audio back
         int received_audio_size = 0;
         void* ptr = encoded_audio;
-        for (size_t i = 0; i < encoded_audio_size; i += sizeof(short)*128)
+        for (size_t i = 0; i < encoded_audio_size; i += sizeof(short)*DONGLE_AUDIO_PROTOCOL)
         {
             send_audio_packet(serialPort, ptr, 0);
 
@@ -173,12 +173,12 @@ int main(int argc, char** argv)
             // Pause between packets
             usleep(sleep_time);
             
-            ptr += sizeof(short)*128;
+            ptr += sizeof(short)*DONGLE_AUDIO_PROTOCOL;
         }
         
         // Force Teensy out of sync
         ptr = random_data;
-        for (size_t i = 0; i < sizeof(random_data); i += sizeof(short)*128)
+        for (size_t i = 0; i < sizeof(random_data); i += sizeof(short)*DONGLE_AUDIO_PROTOCOL)
         {
             send_audio_packet(serialPort, ptr, 0);
 
@@ -192,7 +192,7 @@ int main(int argc, char** argv)
             // Pause between packets
             usleep(sleep_time);
             
-            ptr += sizeof(short)*128;
+            ptr += sizeof(short)*DONGLE_AUDIO_PROTOCOL;
         }
         
         printf("Received %d bytes\n", received_audio_size);
