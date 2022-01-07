@@ -49,7 +49,7 @@ static int usb_write_data(struct dongle_packet_handlers* hdnl, void* ptr, int si
 
 static void usb_flush_data(struct dongle_packet_handlers* hndl)
 {
-    //Serial.send_now();
+    Serial.send_now();
 }
 
 struct dongle_packet_handlers arduino_dongle_packet_handlers = {
@@ -304,10 +304,10 @@ FLASHMEM __attribute__((noinline)) void setup() {
     
     open_freedv_handle(FREEDV_MODE_700D);
     
-    freedvTaskQueue = ::xQueueCreate(1, sizeof(struct dongle_packet));
+    freedvTaskQueue = ::xQueueCreate(8, sizeof(struct dongle_packet));
     assert(freedvTaskQueue != nullptr);
         
-    serialTaskQueue = ::xQueueCreate(1, sizeof(int));
+    serialTaskQueue = ::xQueueCreate(8, sizeof(int));
     assert(serialTaskQueue != nullptr);
     
     ::xTaskCreate(serialTask, "serialTask", 32767, nullptr, 2, nullptr);
