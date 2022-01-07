@@ -20,6 +20,8 @@ static short* input_buf;
 static short* output_buf;
 static int last_audio_mode_rx = -1;
 static reliable_text_t reliable_text_obj = nullptr;
+static QueueHandle_t serialTaskQueue = nullptr;
+static QueueHandle_t freedvTaskQueue = nullptr;
 
 static void reliable_text_rx_fn(reliable_text_t rt, const char* txt_ptr, int length, void* state)
 {
@@ -118,69 +120,75 @@ static void open_freedv_handle(int mode)
     last_audio_mode_rx = -1;
 }
 
-static void handle_incoming_messages()
+static bool handle_incoming_messages()
 {
     struct dongle_packet packet;
-    bool send_ack = true;
+    bool valid = false;
     
     if (Serial.available() && read_packet(&arduino_dongle_packet_handlers, &packet) > 0)
     {
-        //SerialUSB1.printf("got packet %d\r\n", packet.type);
-        
-        // Handle request depending on the packet type.
-        switch(packet.type)
-        {
-            case DONGLE_PACKET_RX_AUDIO:
-            case DONGLE_PACKET_TX_AUDIO:
-            {
-                // Inbound audio to be processed. Append to ring buffer for later handling.
-                if (last_audio_mode_rx != packet.type)
-                {
-                    ringbuf_reset(audio_input_buf);
-                    ringbuf_reset(audio_output_buf);
-                    last_audio_mode_rx = packet.type;
-                }
-                in_transmit = packet.type == DONGLE_PACKET_TX_AUDIO;
-                ringbuf_memcpy_into(audio_input_buf, packet.packet_data.audio_data.audio, packet.length);
-                send_ack = false;
-                break;
-            }
-            case DONGLE_PACKET_SET_FDV_MODE:
-            {
-                // Reopen FDV handle using new mode.
-                open_freedv_handle(packet.packet_data.fdv_mode_data.mode);
-                break;
-            }
-            case DONGLE_PACKET_SET_CALLSIGN:
-            {
-                if (reliable_text_obj == nullptr)
-                {
-                    reliable_text_obj = reliable_text_create();
-                    assert(reliable_text_obj);
-                    reliable_text_use_with_freedv(reliable_text_obj, fdv, reliable_text_rx_fn, nullptr);
-                }
-                
-                reliable_text_set_string(
-                    reliable_text_obj, 
-                    (char*)packet.packet_data.fdv_callsign_data.callsign, 
-                    strlen((char*)packet.packet_data.fdv_callsign_data.callsign));
-                reliable_text_reset(reliable_text_obj);
-                
-                SerialUSB1.printf("Callsign set to %s\n", packet.packet_data.fdv_callsign_data.callsign);
-                break;
-            }
-            default:
-            {
-                // Ignore anything we don't recognize.
-                send_ack = false;
-                break;
-            }
-        }
-        
-        if (send_ack) send_ack_packet(&arduino_dongle_packet_handlers);
-        
-        //SerialUSB1.printf("finished processing packet %d\r\n", packet.type);
+        ::xQueueSendToBack(freedvTaskQueue, &packet, pdMS_TO_TICKS(10));
+        valid = true;
     }
+    
+    return valid;
+}
+
+static bool process_freedv_command(struct dongle_packet* packet)
+{
+    bool send_ack = false;
+    
+    switch (packet->type)
+    {
+        case DONGLE_PACKET_RX_AUDIO:
+        case DONGLE_PACKET_TX_AUDIO:
+        {
+            // Inbound audio to be processed. Append to ring buffer for later handling.
+            if (last_audio_mode_rx != packet->type)
+            {
+                ringbuf_reset(audio_input_buf);
+                ringbuf_reset(audio_output_buf);
+                last_audio_mode_rx = packet->type;
+            }
+            in_transmit = packet->type == DONGLE_PACKET_TX_AUDIO;
+            ringbuf_memcpy_into(audio_input_buf, packet->packet_data.audio_data.audio, packet->length);
+            break;
+        }
+        case DONGLE_PACKET_SET_FDV_MODE:
+        {
+            // Reopen FDV handle using new mode.
+            open_freedv_handle(packet->packet_data.fdv_mode_data.mode);
+            send_ack = true;
+            break;
+        }
+        case DONGLE_PACKET_SET_CALLSIGN:
+        {
+            if (reliable_text_obj == nullptr)
+            {
+                reliable_text_obj = reliable_text_create();
+                assert(reliable_text_obj);
+                reliable_text_use_with_freedv(reliable_text_obj, fdv, reliable_text_rx_fn, nullptr);
+            }
+            
+            reliable_text_set_string(
+                reliable_text_obj, 
+                (char*)packet->packet_data.fdv_callsign_data.callsign, 
+                strlen((char*)packet->packet_data.fdv_callsign_data.callsign));
+            reliable_text_reset(reliable_text_obj);
+            
+            //SerialUSB1.printf("Callsign set to %s\n", packet.packet_data.fdv_callsign_data.callsign);
+            
+            send_ack = true;
+            break;
+        }
+        default:
+        {
+            // Ignore anything we don't recognize.
+            break;
+        }
+    }
+    
+    return send_ack;
 }
 
 static void process_queued_audio()
@@ -234,15 +242,12 @@ static void transmit_output_audio()
         send_audio_packet(&arduino_dongle_packet_handlers, buf, in_transmit);
         //digitalWrite(ledPin, LOW);
     }
+    
     if (flush)
     {
-        Serial.send_now();
-    }
-        
+        //Serial.send_now();
+    }    
 }
-
-static QueueHandle_t serialTaskQueue = nullptr;
-static QueueHandle_t freedvTaskQueue = nullptr;
 
 static void serialTask(void*)
 {
@@ -250,11 +255,13 @@ static void serialTask(void*)
     {
         handle_incoming_messages();
         
-        // Wake up FreeDV thread and wait for it to come back
         {
             int tmp = 0;
-            ::xQueueSendToBack(freedvTaskQueue, &tmp, 0);
             ::xQueueReceive(serialTaskQueue, &tmp, pdMS_TO_TICKS(10));
+            if (tmp)
+            {
+                send_ack_packet(&arduino_dongle_packet_handlers);
+            }
         }
         
         transmit_output_audio();
@@ -265,12 +272,15 @@ static void freedvTask(void*)
 {
     while(true)
     {
-        int tmp = 0;
-        if (::xQueueReceive(freedvTaskQueue, &tmp, pdMS_TO_TICKS(10)) == pdTRUE)
+        struct dongle_packet tmp;
+        if (::xQueueReceive(freedvTaskQueue, &tmp, pdMS_TO_TICKS(1)) == pdTRUE)
         {
+            bool send_ack = process_freedv_command(&tmp);
             process_queued_audio();
+            
+            int tmp = send_ack ? 1 : 0;
+            ::xQueueSendToBack(serialTaskQueue, &tmp, pdMS_TO_TICKS(10));
         }
-        ::xQueueSendToBack(serialTaskQueue, &tmp, 0);
     }
 }
 
@@ -294,7 +304,7 @@ FLASHMEM __attribute__((noinline)) void setup() {
     
     open_freedv_handle(FREEDV_MODE_700D);
     
-    freedvTaskQueue = ::xQueueCreate(1, sizeof(int));
+    freedvTaskQueue = ::xQueueCreate(1, sizeof(struct dongle_packet));
     assert(freedvTaskQueue != nullptr);
         
     serialTaskQueue = ::xQueueCreate(1, sizeof(int));

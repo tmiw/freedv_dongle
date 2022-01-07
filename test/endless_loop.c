@@ -109,7 +109,7 @@ int main(int argc, char** argv)
     while(1)
     {
         int bufSize = 128;
-        int sleep_time = (1000.0/8000.0)*128*1000;
+        int sleep_time = 5000; //(1000.0/8000.0)*128*1000;
         short bufIn[bufSize];
 
         printf("Transmitting...\n");

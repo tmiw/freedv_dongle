@@ -8,7 +8,7 @@ extern "C" {
 #include <stdint.h>
 
 #define DONGLE_MAGIC_NUMBER 0x46445644    // FDVD
-#define DONGLE_AUDIO_LENGTH 128
+#define DONGLE_AUDIO_LENGTH 124 // This is sized so that we 100% fill up USB packets for each audio packet.
 #define DONGLE_CALLSIGN_LENGTH 16
     
 #define DONGLE_PACKET_RX_AUDIO 0
