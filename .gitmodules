@@ -5,3 +5,4 @@
 [submodule "3rdparty/freertos"]
 	path = 3rdparty/freertos
 	url = https://github.com/tsandmann/freertos-teensy.git
+	branch = v10.5.1_v3
