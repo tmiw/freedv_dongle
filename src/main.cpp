@@ -10,6 +10,11 @@
 #include "freedv_api.h"
 #include "reliable_text.h"
 
+// Extern definitions of CMSIS required functions as otherwise, we'll end up double defining
+// ones from Teensy.
+extern "C" void arm_dot_prod_f32 (const float *pSrcA, const float *pSrcB, uint32_t blockSize, float *result);
+extern "C" void arm_cmplx_dot_prod_f32 (const float *pSrcA, const float *pSrcB, uint32_t numSamples, float *realResult, float *imagResult);
+
 const int ledPin = 13;
 
 static struct freedv* fdv = nullptr;
@@ -319,4 +324,35 @@ FLASHMEM __attribute__((noinline)) void setup() {
 void loop() 
 {
     // empty
+}
+
+// Implement required Codec2 math methods below as CMSIS doesn't work on ESP32.
+extern "C"
+{
+    void codec2_dot_product_f32(float* left, float* right, size_t len, float* result)
+    {
+        arm_dot_prod_f32(left, right, len, result);
+    }
+
+    void codec2_complex_dot_product_f32(COMP* left, COMP* right, size_t len, float* resultReal, float* resultImag)
+    {
+        arm_cmplx_dot_prod_f32((float*)left, (float*)right, len, resultReal, resultImag);
+    }
+
+    /* Required memory allocation wrapper for embedded platforms. */
+
+    void* codec2_malloc(size_t size)
+    {
+        return malloc(size);
+    }
+
+    void* codec2_calloc(size_t nmemb, size_t size)
+    {
+        return calloc(nmemb, size);
+    }
+
+    void codec2_free(void* ptr)
+    {
+        free(ptr);
+    }
 }

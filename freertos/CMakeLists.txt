@@ -13,7 +13,6 @@ set(FREERTOS_C_SOURCES
 
 set(FREERTOS_CXX_SOURCES
     ${FREERTOS_DIR}/lib/cpp/src/condition_variable.cpp
-    ${FREERTOS_DIR}/lib/cpp/src/freertos_time.cpp
     ${FREERTOS_DIR}/lib/cpp/src/gthr_key.cpp
     ${FREERTOS_DIR}/lib/cpp/src/thread.cpp
     ${FREERTOS_DIR}/lib/gcc/condition_variable.cc
