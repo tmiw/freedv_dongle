@@ -244,7 +244,7 @@ static void transmit_output_audio()
         flush = true;
         //digitalWrite(ledPin, HIGH);
         ringbuf_memcpy_from(buf, audio_output_buf, sizeof(buf));
-        if (Serial.dtr()) send_audio_packet(&arduino_dongle_packet_handlers, buf, in_transmit);
+        if (Serial) send_audio_packet(&arduino_dongle_packet_handlers, buf, in_transmit);
         //digitalWrite(ledPin, LOW);
     }
     
@@ -258,12 +258,12 @@ static void serialTask(void*)
 {
     while(true)
     {
-        if (Serial.dtr()) handle_incoming_messages();
+        if (Serial) handle_incoming_messages();
 
         {
             int tmp = 0;
             ::xQueueReceive(serialTaskQueue, &tmp, pdMS_TO_TICKS(10));
-            if (tmp && Serial.dtr())
+            if (tmp && Serial)
             {
                 send_ack_packet(&arduino_dongle_packet_handlers);
             }
