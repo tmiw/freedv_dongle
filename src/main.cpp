@@ -54,7 +54,7 @@ static int usb_write_data(struct dongle_packet_handlers* hdnl, void* ptr, int si
 
 static void usb_flush_data(struct dongle_packet_handlers* hndl)
 {
-    Serial.send_now();
+    //Serial.send_now();
 }
 
 struct dongle_packet_handlers arduino_dongle_packet_handlers = {
@@ -244,7 +244,7 @@ static void transmit_output_audio()
         flush = true;
         //digitalWrite(ledPin, HIGH);
         ringbuf_memcpy_from(buf, audio_output_buf, sizeof(buf));
-        send_audio_packet(&arduino_dongle_packet_handlers, buf, in_transmit);
+        if (Serial.dtr()) send_audio_packet(&arduino_dongle_packet_handlers, buf, in_transmit);
         //digitalWrite(ledPin, LOW);
     }
     
@@ -258,12 +258,12 @@ static void serialTask(void*)
 {
     while(true)
     {
-        handle_incoming_messages();
-        
+        if (Serial.dtr()) handle_incoming_messages();
+
         {
             int tmp = 0;
             ::xQueueReceive(serialTaskQueue, &tmp, pdMS_TO_TICKS(10));
-            if (tmp)
+            if (tmp && Serial.dtr())
             {
                 send_ack_packet(&arduino_dongle_packet_handlers);
             }
@@ -309,10 +309,10 @@ FLASHMEM __attribute__((noinline)) void setup() {
     
     open_freedv_handle(FREEDV_MODE_700D);
     
-    freedvTaskQueue = ::xQueueCreate(8, sizeof(struct dongle_packet));
+    freedvTaskQueue = ::xQueueCreate(100, sizeof(struct dongle_packet));
     assert(freedvTaskQueue != nullptr);
         
-    serialTaskQueue = ::xQueueCreate(8, sizeof(int));
+    serialTaskQueue = ::xQueueCreate(100, sizeof(int));
     assert(serialTaskQueue != nullptr);
     
     ::xTaskCreate(serialTask, "serialTask", 32767, nullptr, 2, nullptr);

@@ -243,6 +243,7 @@ int read_packet(struct dongle_packet_handlers* handlers, struct dongle_packet* p
 #include <unistd.h>
 #include <sys/select.h>
 #include <assert.h>
+#include <errno.h>
 
 static int usb_read_data(struct dongle_packet_handlers* hndl, void* ptr, int size)
 {
@@ -251,16 +252,16 @@ static int usb_read_data(struct dongle_packet_handlers* hndl, void* ptr, int siz
     struct termios tty;
     if(tcgetattr(sock, &tty) != 0) 
     {
-        fprintf(stderr, "warning: could not get termios values\n");
+        fprintf(stderr, "warning: could not get termios values (errno = %d)\n", errno);
         return read(sock, ptr, size);
     }
     
     tty.c_cc[VTIME] = 0;
     tty.c_cc[VMIN] = size; 
 
-    if (tcsetattr(sock, TCSANOW, &tty) != 0)
+    if (tcsetattr(sock, TCSANOW | TCSASOFT, &tty) != 0)
     {
-        fprintf(stderr, "warning: could not get termios values\n");
+        fprintf(stderr, "warning: could not set termios values (errno = %d)\n", errno);
     }
     
     int result = read(sock, ptr, size);
@@ -268,9 +269,9 @@ static int usb_read_data(struct dongle_packet_handlers* hndl, void* ptr, int siz
     tty.c_cc[VTIME] = 0;
     tty.c_cc[VMIN] = 1; 
 
-    if (tcsetattr(sock, TCSANOW, &tty) != 0)
+    if (tcsetattr(sock, TCSANOW | TCSASOFT, &tty) != 0)
     {
-        fprintf(stderr, "warning: could not restore termios values\n");
+        fprintf(stderr, "warning: could not restore termios values (errno = %d)\n", errno);
     }
 
     return result;
